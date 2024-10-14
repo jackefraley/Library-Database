@@ -9,6 +9,7 @@
 
 import sqlite3
 import datetime
+import sys
 
 con = sqlite3.connect("books.db")
 cur = con.cursor()
@@ -45,7 +46,7 @@ cur.execute('''
 con.commit()
 
 def userLogin():
-    print("Please Login:\n1. Sign In\n2. Sign Up")
+    print("Please Login:\n1. Sign In\n2. Sign Up\n3. Quit")
     option = input("\nSelection: ")
     if option == "1":
         sign_in()
@@ -53,6 +54,8 @@ def userLogin():
     elif option == "2":
         sign_up()
         return
+    elif option == "3":
+        sys.exit()
     else:
         print("Invalid Input")
 
@@ -201,7 +204,7 @@ def sign_up():
     
     cur.execute('''
             INSERT INTO userIds (firstName, lastName, userName, password, access)
-                VALUES (?, ?, ?, ?, 1)
+                VALUES (?, ?, ?, ?, 2)
             ''', (firstName, lastName, userName, password))
     con.commit()
     sign_in()
@@ -271,41 +274,90 @@ def lookupBook(userId, access):
             bookId, title, subject, author, details, available = bookInfo
             print(f"\nDetails for {title}:")
             print(f"\nSubject: {subject if subject else 'No Subject available'}")
-            print(f"\nAuthor: {author if author else 'No Author available'}")
+            print(f"Author: {author if author else 'No Author available'}")
             print(f"Description: {details if details else 'No Description Available'}")
             print(f"available: {available}")
+            if access == 1:
+                print("Checked out to:")
 
-            print("\nOptions:")
-            print("1. Delete Book")
-            print("2. Check Out Book")
-            print("3. Return Book")
-            print("4. Cancel")
+                cur.execute("SELECT userId FROM checkouts WHERE bookId = ?", (bookId,))
+                users = cur.fetchall()
 
-        while True:
-            action = input("\nEnter the action: ")
-            if action == "1":
-                delete_book(title)
-                return
-            elif action == "2":
-                if available <= 0:
-                    print("No copies avaliable")
-                    
+                user_ids = [user[0] for user in users]
+
+                if user_ids:
+
+                    placeholders = ','.join(['?'] * len(user_ids))
+
+                    cur.execute(f"SELECT firstName, lastName FROM userIds WHERE userId IN ({placeholders})", user_ids)
+                    names = cur.fetchall()
+
+                    for idx, (firstName, lastName) in enumerate(names, start=1):
+                        print(f"{idx}. {lastName}, {firstName}")
+                
                 else:
-                    check_out_book(userId, bookId)
-                    return
-            elif action == "3":
-                return_book(userId, bookId)
-                return
-            elif action == "4":
-                print("Action has been cancelled")
-                return
-            else:
-                print("Invalid input")
+                    print("No users have checked out this book.")
 
-def delete_book(bookId):
-    cur.execute("DELETE FROM books WHERE bookId = ?", (bookId,))
-    print(f"{bookId} deleted successfully")
-    con.commit()
+                print("\nOptions:")
+                print("1. Delete Book")
+                print("2. Check Out Book")
+                print("3. Return Book")
+                print("4. Cancel")
+
+                while True:
+                    action = input("\nEnter the action: ")
+                    if action == "1":
+                        delete_book(bookId, access)
+                        return
+                    elif action == "2":
+                        if available <= 0:
+                            print("No copies avaliable")
+                            
+                        else:
+                            check_out_book(userId, bookId)
+                            return
+                    elif action == "3":
+                        return_book(userId, bookId)
+                        return
+                    elif action == "4":
+                        print("Action has been cancelled")
+                        return
+                    else:
+                        print("Invalid input")
+            else:
+                print("\nOptions:")
+                print("1. Check Out Book")
+                print("2. Return Book")
+                print("3. Cancel")
+                while True:
+                    action = input("\nEnter the action: ")
+                    if action == "1":
+                        if available <= 0:
+                            print("No copies avaliable")
+                            
+                        else:
+                            check_out_book(userId, bookId)
+                            return
+                    elif action == "2":
+                        return_book(userId, bookId)
+                        return
+                    elif action == "3":
+                        print("Action has been cancelled")
+                        return
+                    else:
+                        print("Invalid input")
+
+        else:
+            print("No books found")
+
+
+def delete_book(bookId, access):
+    if access == 1:
+        cur.execute("DELETE FROM books WHERE bookId = ?", (bookId,))
+        print(f"{bookId} deleted successfully")
+        con.commit()
+    else:
+        print("Access Unavailable")
 
 def check_out_book(userId, bookId):
     cur.execute('''
@@ -355,19 +407,30 @@ def return_book(userId, bookId):
 
 def getValidInput(login):
     userId, firstName, lastName, userName, password, access = login
-    while True:
-        print("\nWhat would you like to do? \n\n1. Add Book \n2. Lookup Book \n3. Lookup User \n4. Quit ")
-        command  = input("\nEnter the action: ")
-        if command == "1":
-            addBook(access)
-        elif command == "2":
-            lookupBook(userId, access)
-        elif command == "3":
-            userEdit(access)
-        elif command == "4":
-            userLogin()
-        else:
-            print("Please Try Again")
+    if access == 1:
+        while True:
+            print("\nWhat would you like to do? \n\n1. Add Book \n2. Lookup Book \n3. Lookup User \n4. Logout ")
+            command  = input("\nEnter the action: ")
+            if command == "1":
+                addBook(access)
+            elif command == "2":
+                lookupBook(userId, access)
+            elif command == "3":
+                userEdit(access)
+            elif command == "4":
+                userLogin()
+            else:
+                print("Please Try Again")
+    else:
+        while True:
+            print("\nWhat would you like to do? \n\n1. Lookup Book\n2. Logout ")
+            command  = input("\nEnter the action: ")
+            if command == "1":
+                lookupBook(userId, access)
+            elif command == "2":
+                userLogin()
+            else:
+                print("Please Try Again")
 
 
 userLogin()
