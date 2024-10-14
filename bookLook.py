@@ -91,81 +91,78 @@ def sign_in():
 
     return
 
-def userEdit(access):
-    if access == 1:
-        print("Search Users by Name:")
-        searchTerm = input("Search: ")
-        search = f"%{searchTerm}%"
-        cur.execute('''SELECT firstName, lastName, userName, password, access FROM userIds
-                    WHERE firstName LIKE ? COLLATE NOCASE
-                    OR lastName LIKE ? COLLATE NOCASE
-                    OR userName LIKE ? COLLATE NOCASE
-                    ''', (search, search, search))
-        results = cur.fetchall()
+def userEdit():
+    print("Search Users by Name:")
+    searchTerm = input("Search: ")
+    search = f"%{searchTerm}%"
+    cur.execute('''SELECT firstName, lastName, userName, password, access FROM userIds
+                WHERE firstName LIKE ? COLLATE NOCASE
+                OR lastName LIKE ? COLLATE NOCASE
+                OR userName LIKE ? COLLATE NOCASE
+                ''', (search, search, search))
+    results = cur.fetchall()
 
-        if not results:
-            print("No users found.")
+    if not results:
+        print("No users found.")
 
-        else:
-            print("Users found:")
-            for idx, (firstName, lastName, userName, password, access) in enumerate(results, start=1):
-                print(f"{idx}. First: {firstName}, Last: {lastName}, User: {userName}, Access: {access}")
-
-            while True:
-                try:
-                    selection = int(input(f"\nEnter Desired User Number (1-{len(results)}): ")) -1
-                    if 0 <= selection < len(results):
-                        break
-                    else:
-                        print("Invalid Input")
-                except ValueError:
-                    print("Invalid Input")
-            
-            selectedUser = results[selection][0]
-
-            cur.execute("SELECT userId, firstName, lastName, userName, access FROM userIds WHERE firstName = ? COLLATE NOCASE", (selectedUser,))
-            userInfo = cur.fetchone()
-
-            if userInfo:
-                userId, firstName, lastName, userName, access = userInfo
-                cur.execute("SELECT bookId, checkoutDate, dueDate FROM checkouts WHERE userId = ?", (userId,))
-                checkedOutBooks = cur.fetchone()
-
-                print(f"\nDetails for {lastName}, {firstName}:")
-                print(f"\nUserName: {userName}")
-                print(f"Access: {access}")
-
-                if checkedOutBooks:
-                    bookId, checkoutDate, dueDate = checkedOutBooks
-                    cur.execute("SELECT title, subject, author FROM books WHERE bookId = ?", (bookId,))
-                    results = cur.fetchall()
-                    print("Books Checked Out:")
-                    for idx, results in enumerate(results, start=1):
-                        title, subject, author = results[:3]
-                        print(f"{idx}. Title: {title}, Subject: {subject}, Author: {author}, Due Date: {dueDate}")
-                else:
-                    print("No books checked out")
-
-                print("\nOptions:")
-                print("1. Delete User")
-                print("2. Change Access")
-                print("3. Cancel")
-
-            while True:
-                action = input("\nEnter the action: ")
-                if action == "1":
-                    delete_user(userName)
-                    return
-                elif action == "2":
-                    change_access(userName)
-                    return
-                elif action == "3":
-                    print("Action has been cancelled")
-                    return
-                else:
-                    print("Invalid input")
     else:
-        print("Invalid Access")
+        print("Users found:")
+        for idx, (firstName, lastName, userName, password, access) in enumerate(results, start=1):
+            print(f"{idx}. First: {firstName}, Last: {lastName}, User: {userName}, Access: {access}")
+
+        while True:
+            try:
+                selection = int(input(f"\nEnter Desired User Number (1-{len(results)}): ")) -1
+                if 0 <= selection < len(results):
+                    break
+                else:
+                    print("Invalid Input")
+            except ValueError:
+                print("Invalid Input")
+            
+        selectedUser = results[selection][0]
+
+        cur.execute("SELECT userId, firstName, lastName, userName, access FROM userIds WHERE firstName = ? COLLATE NOCASE", (selectedUser,))
+        userInfo = cur.fetchone()
+
+        if userInfo:
+            userId, firstName, lastName, userName, access = userInfo
+            cur.execute("SELECT bookId, checkoutDate, dueDate FROM checkouts WHERE userId = ?", (userId,))
+            checkedOutBooks = cur.fetchone()
+
+            print(f"\nDetails for {lastName}, {firstName}:")
+            print(f"\nUserName: {userName}")
+            print(f"Access: {access}")
+
+            if checkedOutBooks:
+                bookId, checkoutDate, dueDate = checkedOutBooks
+                cur.execute("SELECT title, subject, author FROM books WHERE bookId = ?", (bookId,))
+                results = cur.fetchall()
+                print("Books Checked Out:")
+                for idx, results in enumerate(results, start=1):
+                    title, subject, author = results[:3]
+                    print(f"{idx}. Title: {title}, Subject: {subject}, Author: {author}, Due Date: {dueDate}")
+            else:
+                print("No books checked out")
+
+            print("\nOptions:")
+            print("1. Delete User")
+            print("2. Change Access")
+            print("3. Cancel")
+
+        while True:
+            action = input("\nEnter the action: ")
+            if action == "1":
+                delete_user(userName)
+                return
+            elif action == "2":
+                change_access(userName)
+                return
+            elif action == "3":
+                print("Action has been cancelled")
+                return
+            else:
+                print("Invalid input")
 
 def delete_user(userName):
     cur.execute("DELETE FROM userIds WHERE userName = ? COLLATE NOCASE", (userName,))
@@ -210,8 +207,7 @@ def sign_up():
     sign_in()
     return
 
-def addBook(access):
-    if access == 1:
+def addBook():
         title = input("Title: ")
         subject = input("Subject: ")
         author = input("Author: ")
@@ -221,9 +217,6 @@ def addBook(access):
             VALUES (?, ?, ?, ?, 2)
             ''', (title, subject, author, details))
         con.commit()
-    else:
-        print("Access Unavailable")
-        return
 
 def lookupBook(userId, access):
     search = input("Search: ").lower()
@@ -412,11 +405,11 @@ def getValidInput(login):
             print("\nWhat would you like to do? \n\n1. Add Book \n2. Lookup Book \n3. Lookup User \n4. Logout ")
             command  = input("\nEnter the action: ")
             if command == "1":
-                addBook(access)
+                addBook()
             elif command == "2":
                 lookupBook(userId, access)
             elif command == "3":
-                userEdit(access)
+                userEdit()
             elif command == "4":
                 userLogin()
             else:
